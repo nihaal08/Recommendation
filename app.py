@@ -127,17 +127,17 @@ if st.session_state.page == "Movie Recommendations":
                 # Get content-based filtering similar movies
                 movie_vec = vectorizer.transform([movie_info['genres_str']]).toarray()
                 content_similarities = cosine_similarity(movie_vec, movies_genres_matrix).flatten()
-                similar_movies_cb_indices = np.argsort(content_similarities)[-11:-1][::-1]
+                similar_movies_cb_indices = np.argsort(content_similarities)[-11:][::-1]  # Adjusted index range
                 
                 # Get collaborative filtering similar movies
                 movie_id = movies_title_mapper[title]
                 similar_movies_cf = find_similar_movies(movie_id, X, k=10)
                 
                 # Combine both CBF and CF results
-                all_similar_movies = set(similar_movies_cb_indices) | set(similar_movies_cf)
+                all_similar_movies = set(similar_movies_cb_indices + similar_movies_cf)  # Convert to set and combine
                 
-                # Get the top 10 movie titles
-                recommended_movie_titles = [movies['title'].iloc[idx] for idx in list(all_similar_movies)[:10]]
+                # Get the top 10 unique movie titles
+                recommended_movie_titles = list(set([movies['title'].iloc[idx] for idx in list(all_similar_movies)]))[:10]  # Adjusted indexing
                 
                 st.subheader("Top 10 Recommended Movies")
                 for movie_title in recommended_movie_titles:
@@ -169,11 +169,23 @@ elif st.session_state.page == "Movie Reviews":
                 
                 # Merge reviews with movie titles
                 movie_reviews = ratings[ratings['movieId'] == movie_info['movieId']]  # Using ratings as reviews
+                
                 if not movie_reviews.empty:
-                    movie_reviews = movie_reviews.merge(movies[['movieId', 'title']], on='movieId', how='left')
+                    unique_user_ids = movie_reviews['userId'].unique()
+                    unique_user_reviews = []
                     
-                    # Display reviews for the selected movie as a DataFrame
-                    st.dataframe(movie_reviews[['userId', 'rating', 'timestamp']])
+                    for user_id in unique_user_ids:
+                        user_reviews = movie_reviews[movie_reviews['userId'] == user_id]
+                        unique_user_reviews.append(user_reviews)
+                        
+                    st.subheader("Reviews")
+                    
+                    for i, user_reviews in enumerate(unique_user_reviews, start=1):
+                        if not user_reviews.empty:
+                            st.subheader(f"Reviews from User {i}:")
+                            st.write(user_reviews)
+                        else:
+                            st.write(f"No reviews available from user {i}.")
                 else:
                     st.write("No reviews available for this movie.")
         else:
