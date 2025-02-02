@@ -127,20 +127,20 @@ if st.session_state.page == "Movie Recommendations":
                 # Get content-based filtering similar movies
                 movie_vec = vectorizer.transform([movie_info['genres_str']]).toarray()
                 content_similarities = cosine_similarity(movie_vec, movies_genres_matrix).flatten()
-                similar_movies_cb_indices = np.argsort(content_similarities)[-11:][::-1]  # Adjusted index range
+                similar_movies_cb_indices = np.argsort(content_similarities)[-11:-1][::-1]  # Top 10 content-based recommendations
                 
                 # Get collaborative filtering similar movies
                 movie_id = movies_title_mapper[title]
                 similar_movies_cf = find_similar_movies(movie_id, X, k=10)
                 
-                # Combine both CBF and CF results
-                all_similar_movies = set(similar_movies_cb_indices + similar_movies_cf)  # Convert to set and combine
+                # Combine both CBF and CF results as sets of movie indices
+                all_similar_movies_indices = set(similar_movies_cb_indices.tolist()) | set(similar_movies_cf)  # Removed duplicates
                 
-                # Get the top 10 unique movie titles
-                recommended_movie_titles = list(set([movies['title'].iloc[idx] for idx in list(all_similar_movies)]))[:10]  # Adjusted indexing
+                # Get the top 10 movie titles safely
+                recommended_movie_titles = [movies['title'].iloc[idx] for idx in all_similar_movies_indices if idx < len(movies)]  # Ensure idx is valid
                 
                 st.subheader("Top 10 Recommended Movies")
-                for movie_title in recommended_movie_titles:
+                for movie_title in recommended_movie_titles[:10]:  # Display only top 10
                     st.markdown(f"🎬 **{movie_title}**")
         else:
             st.error("Movie not found. Please enter a valid title.")
